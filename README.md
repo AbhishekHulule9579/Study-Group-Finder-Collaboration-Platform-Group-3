@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Study Group Finder & Collaboration Platform - README</title>
 </head>
 <body>
 
@@ -59,6 +58,7 @@
     </li>
   </ul>
 
+  
   <ul>
     <li><strong>Study Groups</strong>
       <ul>
@@ -68,6 +68,7 @@
         <li>Group discovery and filtering</li>
       </ul>
     </li>
+    <h3>🚧 In Progress</h3>
     <li><strong>Communication</strong>
       <ul>
         <li>Real-time chat</li>
@@ -75,7 +76,6 @@
         <li>Direct messaging</li>
       </ul>
     </li>
-     <h3>🚧 In Progress</h3>
     <li><strong>Calendar & Scheduling</strong>
       <ul>
         <li>Schedule study sessions</li>
@@ -92,6 +92,7 @@
     <li>React 18 (with Vite)</li>
     <li>Tailwind CSS</li>
     <li>React Router</li>
+    
   </ul>
 
   <h3>Backend</h3>
@@ -106,6 +107,7 @@
 
   <h3>Third-Party Services</h3>
   <ul>
+    
     <li>Gmail SMTP (Email Notifications)</li>
   </ul>
 
@@ -182,19 +184,6 @@ spring.mail.properties.mail.smtp.writetimeout=60000
 # 3. JWT Configuration
 jwt.secret=ThisIsASecretKeyForJWTsThatShouldBeLongAndSecureAndDifferent
 jwt.expiration.ms=86400000
-jwt.expiration=86400000
-
-# 4. Logging Configuration
-logging.level.org.springframework.security=DEBUG
-logging.level.com.studyGroup.backend.config.JwtAuthFilter=DEBUG
-
-# 5. File Upload Settings
-spring.servlet.multipart.enabled=true
-spring.servlet.multipart.max-file-size=10MB
-spring.servlet.multipart.max-request-size=10MB
-
-# File storage location (use a local path for development)
-file.upload-dir=document-storage
 </code></pre>
 
   <div class="note">
@@ -242,6 +231,7 @@ npm run dev</code></pre>
     <li>React & React Router</li>
     <li>Tailwind CSS</li>
     <li>Spring Boot Documentation</li>
+  
   </ul>
 
   <footer>
