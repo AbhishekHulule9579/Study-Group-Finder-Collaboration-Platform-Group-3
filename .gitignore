@@ -27,7 +27,13 @@ Thumbs.db
 
 
 ### Creating separate application-local.properties ###
+src/main/resources/application-local.properties
 
+# Node.js
+node_modules/
+
+# IDE files
+.idea/
+
+# Custom sensitive files
 /backend/src/main/resources/application-local.properties
-
-

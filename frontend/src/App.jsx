@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Home from "./components/Home.jsx";
 import Nav from "./components/Nav.jsx";
 import Collab from "./components/Collab.jsx";
@@ -14,23 +14,109 @@ import MyGroups from "./components/MyGroups.jsx";
 import FindPeers from "./components/FindPeers.jsx";
 import GroupDetailPage from "./components/groups/GroupDetailPage";
 import GroupManagementPage from "./components/groups/GroupManagementPage.jsx";
+import QuickNavButton from "./components/QuickActionButton.jsx";
+import FloatingChatWindow from "./components/FloatingChatWindow";
+import GroupChat from "./components/groups/GroupChat";
+import NotificationsPage from "./components/NotificationsPage.jsx";
+import { getAllNotifications } from "./services/NotificationService.js"; // Import service
 
-import { Route, Routes, Navigate } from "react-router-dom";
+// 🗓️ Calendar Import
+import CalendarView from "./components/Calendar/CalendarView.jsx";
 
-// A simple Protected Route Component
+import { Route, Routes, Navigate, useLocation, useNavigate } from "react-router-dom";
+
+// ✅ Protected Route Component
 function ProtectedRoute({ children }) {
   const token = sessionStorage.getItem("token");
-  // If no token, redirect to login, replacing the current history entry
   return token ? children : <Navigate to="/login" replace />;
 }
 
+// ✅ Wrapper to hide QuickNavButton on login/signup pages
+function Layout({ children, notifications, unreadCount, onLogout }) {
+  const location = useLocation();
+  const hideOn = ["/login", "/signup", "/forgot-password"];
+  const shouldHide = hideOn.includes(location.pathname);
+  return (
+    <>
+      <Nav
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onLogout={onLogout}
+      />
+      {!shouldHide && <QuickNavButton />} {/* 🟣 Floating button */}
+      {children}
+    </>
+  );
+}
+
 const App = () => {
+  // Support multiple (array) floating chats
+  const [floatingChats, setFloatingChats] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const fetchNotifications = useCallback(async () => {
+    const token = sessionStorage.getItem("token");
+    const userJson = sessionStorage.getItem("user");
+    if (!token || !userJson) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+    try {
+      const user = JSON.parse(userJson);
+      if (user.id) {
+        const notifData = await getAllNotifications(user.id);
+        const sortedNotifs = notifData.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+        setNotifications(sortedNotifs);
+        setUnreadCount(sortedNotifs.filter((n) => !n.read).length);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    setNotifications([]);
+    setUnreadCount(0);
+    navigate("/login");
+  }, [navigate]);
+
+  useEffect(() => {
+    const publicPages = ["/login", "/signup", "/forgot-password", "/"];
+    if (!publicPages.includes(location.pathname)) {
+      fetchNotifications();
+    }
+  }, [location.pathname, fetchNotifications]);
+
+  const openFloatingChat = (chatProps) => {
+    setFloatingChats((prev) => {
+      if (prev.find((c) => c.groupId === chatProps.groupId)) return prev;
+      return [...prev, { ...chatProps, id: chatProps.groupId }];
+    });
+  };
+
+  const closeFloatingChat = (id) => {
+    setFloatingChats((chats) => chats.filter((chat) => chat.id !== id));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
-      <div>
+      <Layout
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onLogout={handleLogout}
+      >
         <Routes>
-          {/* Public Routes */}
+          {/* 🌍 Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/collab" element={<Collab />} />
@@ -39,7 +125,7 @@ const App = () => {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/build-profile" element={<BuildProfile />} />
 
-          {/* Authenticated Routes wrapped in ProtectedRoute */}
+          {/* 🔐 Authenticated Routes */}
           <Route
             path="/dashboard"
             element={
@@ -48,6 +134,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/profile"
             element={
@@ -56,6 +143,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/my-courses"
             element={
@@ -64,6 +152,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/my-groups"
             element={
@@ -72,6 +161,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/find-peers"
             element={
@@ -80,8 +170,18 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-          {/* --- Group Routes --- */}
-          {/* IMPORTANT: The more specific route must come first */}
+
+          {/* 🗓️ Calendar Page */}
+          <Route
+            path="/calendar"
+            element={
+              <ProtectedRoute>
+                <CalendarView />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 👥 Group Routes */}
           <Route
             path="/group/:groupId/manage"
             element={
@@ -94,15 +194,44 @@ const App = () => {
             path="/group/:groupId"
             element={
               <ProtectedRoute>
-                <GroupDetailPage />
+                <GroupDetailPage openFloatingChat={openFloatingChat} />
               </ProtectedRoute>
             }
           />
 
-          {/* Optional: Add a 404 Not Found page for any unmatched URLs */}
-          <Route path="*" element={<h1>404: Page Not Found</h1>} />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <NotificationsPage
+                  notifications={notifications}
+                  onNotificationsUpdate={fetchNotifications}
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 🚫 404 Fallback */}
+          <Route
+            path="*"
+            element={
+              <h1 className="text-center mt-20 text-2xl font-semibold text-gray-600">
+                404: Page Not Found
+              </h1>
+            }
+          />
         </Routes>
-      </div>
+      </Layout>
+
+      {/* 💬 Render all floating chat windows */}
+      {floatingChats.map((chat) => (
+        <FloatingChatWindow
+          key={chat.id}
+          onClose={() => closeFloatingChat(chat.id)}
+        >
+          <GroupChat {...chat} openFloatingChat={openFloatingChat} />
+        </FloatingChatWindow>
+      ))}
     </div>
   );
 };

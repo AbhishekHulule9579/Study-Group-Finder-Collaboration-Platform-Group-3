@@ -112,7 +112,11 @@ public class GroupController {
 
             GroupDTO newGroup = groupService.createGroup(createGroupRequest, currentUser);
             return ResponseEntity.ok(newGroup);
-
+        
+        // 🚩 FIX: Catch RuntimeException (e.g., "Course not found") to return 400 Bad Request
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "An error occurred while creating the group: " + e.getMessage()));
@@ -147,6 +151,25 @@ public class GroupController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "An error occurred while fetching all groups: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/course/{courseId}")
+    public ResponseEntity<?> getGroupsByCourse(@PathVariable String courseId, @RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.substring(7);
+            User currentUser = userService.getUserProfile(token);
+
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid or expired token."));
+            }
+
+            List<GroupDTO> groups = groupService.findGroupsByUserIdAndCourseId(currentUser.getId(), courseId);
+            return ResponseEntity.ok(groups);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "An error occurred while fetching groups: " + e.getMessage()));
         }
     }
 
@@ -237,7 +260,6 @@ public class GroupController {
                     .body(Map.of("message", "An error occurred while updating group details: " + e.getMessage()));
         }
     }
-
     // ----------------------------------------------------------------------
     // 🚩 NEW RESTful Endpoint: Handles Group Join Request (Approve/Deny)
     // Replaces the old @PostMapping("/requests/handle")
@@ -274,7 +296,6 @@ public class GroupController {
                     .body(Map.of("message", "An unexpected error occurred: " + e.getMessage()));
         }
     }
-    
     // ----------------------------------------------------------------------
     // 🚩 NEW RESTful Endpoint: Remove Member (DELETE /{groupId}/members/{memberId})
     // ----------------------------------------------------------------------
